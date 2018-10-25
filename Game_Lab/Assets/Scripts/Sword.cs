@@ -1,69 +1,106 @@
-﻿using System.Collections;
+﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
-public enum Element
+public enum Element : uint
 {
-    FIRE,
-    EARTH,
-    WATER,
-    AIR,
-    LIFE,
-    DEATH
+    FIRE = 0xFFFF0000,
+    EARTH = 0xFF503232,
+    WATER = 0xFF0000FF,
+    AIR = 0xFF00FF77,
+    LIFE = 0xFFFFFFFF,
+    DEATH = 0xFF000000
 }
-
-    
 
 public class Sword : MonoBehaviour
 {
     Animator anim;
-    public int[] element;
-    private bool storeing = false;
+    private Element selected;
+    private List<Element> elements = new List<Element>();
 
-	// Use this for initialization
-	void Start ()
+    public Renderer[] elementRenderers = { };
+    public int elementLimit = 2;
+
+    private bool storing = false;
+    private Color dColor;
+
+    // Use this for initialization
+    void Start()
     {
-        anim = gameObject.GetComponent<Animator>();
+        anim = GetComponent<Animator>();
+        dColor = elementRenderers[0].material.color;
     }
-	
-	// Update is called once per frame
-	void Update ()
+
+    // Update is called once per frame
+    void Update()
     {
         if (Input.GetMouseButtonDown(0))
-        
             anim.SetTrigger("Active");
-        
+
 
         if (Input.GetKeyDown(KeyCode.E))
-            ElementSwitch();
+            ElementCycle();
 
-        if (Input.GetKeyDown(KeyCode.Q) && storeing == false)
-            ElementEquip();
-
-        else if (Input.GetKeyDown(KeyCode.Q) && storeing == true)
-            ElementJoin();
+        if (Input.GetKeyDown(KeyCode.Q))
+            ElementAdd();
 
         if (Input.GetKeyDown(KeyCode.Space))
-            ElementStore();
-
-	}
-    public void ElementSwitch()
-    {
+            storing = true;
 
     }
 
-    public void ElementEquip()
+    public void ElementCycle()
     {
+        int sel = Array.IndexOf(Enum.GetValues(typeof(Element)), selected) + 1;
 
+        if (sel >= Enum.GetValues(typeof(Element)).Length)
+            sel = 0;
+
+        selected = Enum.GetValues(typeof(Element)).Cast<Element>().ElementAt(sel);
+        Debug.Log(selected);
     }
 
-    public void ElementStore()
+    public void ElementAdd()
     {
+        if (!storing)
+            elements.Clear();
+        storing = false;
 
+        if (elements.Count >= elementLimit)
+            return;
+
+        elements.Add(selected);
+
+        Debug.Log("SEL: " + string.Join(", ", elements.Select(e => e.ToString()).ToArray()));
+
+        for (int i = 0; i < elementRenderers.Length; i++)
+        {
+            if (i < elements.Count)
+                elementRenderers[i].material.color = GetColor((uint)elements[i]);
+            else
+                elementRenderers[i].material.color = dColor;
+        }
     }
 
-    public void ElementJoin()
+    private void OnValidate()
     {
+        if (elementRenderers == null)
+            elementRenderers = new Renderer[elementLimit];
 
+        if (elementRenderers.Length != elementLimit)
+            Array.Resize(ref elementRenderers, elementLimit);
+    }
+
+    private Color GetColor(uint argb)
+    {
+        uint alpha = (argb >> 24) & 0xFF;
+        uint red = (argb >> 16) & 0xFF;
+        uint green = (argb >> 8) & 0xFF;
+        uint blue = argb & 0xFF;
+
+        Debug.LogFormat("{0} {1} {2} {3}", alpha / 255F, red / 255F, green / 255F, blue / 255F);
+
+        return new Color(red / 255F, green / 255F, blue / 255F, alpha / 255F);
     }
 }
